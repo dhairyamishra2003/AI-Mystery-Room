@@ -3,3 +3,5 @@ dist/
 .env
 .env.local
 coverage/
+node_modules
+.vite/
