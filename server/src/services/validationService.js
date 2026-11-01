@@ -1,6 +1,39 @@
 import { z } from 'zod';
 import { DIFFICULTY } from './scoringService.js';
 
+export const CATEGORY_DEFINITIONS = {
+  conversations: {
+    en: 'Conversations',
+    hi: 'बातचीत',
+    desc: 'Dialogue records and suspicious conversations.'
+  },
+  photographs: {
+    en: 'Photographs',
+    hi: 'तस्वीरें',
+    desc: 'Images, photographs and visual evidence.'
+  },
+  cctv_simulations: {
+    en: 'CCTV Simulations',
+    hi: 'सीसीटीवी फुटेज',
+    desc: 'Simulated surveillance footage and recordings.'
+  },
+  witness_accounts: {
+    en: 'Witness Accounts',
+    hi: 'गवाहों के बयान',
+    desc: 'Statements and testimonies from witnesses.'
+  },
+  physical_evidence: {
+    en: 'Physical Evidence',
+    hi: 'भौतिक साक्ष्य',
+    desc: 'Fingerprints, objects, documents and forensic evidence.'
+  },
+  timeline_records: {
+    en: 'Timeline Records',
+    hi: 'समयरेखा रिकॉर्ड',
+    desc: 'Events, timestamps and activity records.'
+  }
+};
+
 const required = z.string().trim().min(1);
 const generatedSchema = z.object({
   title: required,
@@ -32,7 +65,7 @@ const generatedSchema = z.object({
 
 const unique = (values) => new Set(values).size === values.length;
 
-export function validateGeneratedCase(payload, difficulty) {
+export function validateGeneratedCase(payload, difficulty, allowedCategoryIds = null, language = 'en') {
   const data = generatedSchema.parse(payload);
   const config = DIFFICULTY[difficulty];
 
@@ -63,6 +96,32 @@ export function validateGeneratedCase(payload, difficulty) {
 
   if (!data.solution.evidenceIds.every(id => data.clues.some(x => x.clueId === id))) {
     throw new Error('Solution references missing evidence');
+  }
+
+  // Normalize clue categories to respect selected evidence categories
+  if (Array.isArray(allowedCategoryIds) && allowedCategoryIds.length > 0) {
+    data.clues.forEach((clue, idx) => {
+      const rawCat = (clue.category || '').toLowerCase();
+      const matchedId = allowedCategoryIds.find(id => {
+        const def = CATEGORY_DEFINITIONS[id];
+        return id === rawCat ||
+          def?.en.toLowerCase() === rawCat ||
+          rawCat.includes(id) ||
+          (def && rawCat.includes(def.en.toLowerCase())) ||
+          (def && rawCat.includes(def.hi));
+      });
+
+      if (matchedId) {
+        clue.category = language === 'hi'
+          ? (CATEGORY_DEFINITIONS[matchedId]?.hi || CATEGORY_DEFINITIONS[matchedId]?.en || matchedId)
+          : (CATEGORY_DEFINITIONS[matchedId]?.en || matchedId);
+      } else {
+        const fallbackId = allowedCategoryIds[idx % allowedCategoryIds.length];
+        clue.category = language === 'hi'
+          ? (CATEGORY_DEFINITIONS[fallbackId]?.hi || CATEGORY_DEFINITIONS[fallbackId]?.en || fallbackId)
+          : (CATEGORY_DEFINITIONS[fallbackId]?.en || fallbackId);
+      }
+    });
   }
 
   return data;

@@ -1,6 +1,6 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { DIFFICULTY } from './scoringService.js';
-import { validateGeneratedCase } from './validationService.js';
+import { validateGeneratedCase, CATEGORY_DEFINITIONS } from './validationService.js';
 
 const schema = {
   type: 'OBJECT',
@@ -59,7 +59,7 @@ const schema = {
   required: ['title', 'story', 'suspects', 'clues', 'hints', 'solution']
 };
 
-export async function generateMystery(premise, difficulty, language) {
+export async function generateMystery(premise, difficulty, language, evidenceCategories = null) {
   if (!process.env.GEMINI_API_KEY) {
     throw Object.assign(new Error('The AI service is not configured.'), { status: 503, code: 'AI_UNAVAILABLE' });
   }
@@ -70,7 +70,23 @@ export async function generateMystery(premise, difficulty, language) {
     ? 'Write player-visible descriptive text (title, story, suspect name/occupation/description/motive/alibi, clue title/description/category, hint text, solution explanation) in natural Hindi using Devanagari script.'
     : 'Write every player-visible field in clear English.';
 
-  const prompt = `You are an expert detective mystery game designer. Return an original, logically consistent, concise mystery. ${languageInstruction} Difficulty: ${difficulty}. Premise: ${premise || 'Create a compelling original premise.'}. Generate exactly ${c.suspects} suspects, ${c.clues} clues, and ${c.hints} progressive hints. One suspect must be the definite culprit. Clues collectively establish them; do not reveal the culprit in story, descriptions, motives, alibis, or hints. IMPORTANT: All identifiers MUST strictly remain in English alphanumeric format: suspect_01 to suspect_0${c.suspects}, clue_01 to clue_0${c.clues}, and hint_01 to hint_0${c.hints}. In solution.culpritId, you MUST strictly use the exact suspectId (e.g. "suspect_01"), NEVER the suspect name. In solution.evidenceIds, you MUST strictly cite valid clueId strings (e.g. ["clue_01", "clue_02"]), NEVER clue titles. Keep the title under 8 words, the story under 130 words, every suspect field and clue description under 24 words, each hint under 18 words, and the solution under 110 words. Never use markdown.`;
+  const activeCategories = Array.isArray(evidenceCategories) && evidenceCategories.length > 0
+    ? evidenceCategories
+    : Object.keys(CATEGORY_DEFINITIONS);
+
+  const allowedEnList = activeCategories
+    .map(id => CATEGORY_DEFINITIONS[id]?.en || id)
+    .join(', ');
+
+  const allowedHiList = activeCategories
+    .map(id => `${CATEGORY_DEFINITIONS[id]?.hi || id} (${CATEGORY_DEFINITIONS[id]?.en || id})`)
+    .join(', ');
+
+  const categoryInstruction = language === 'hi'
+    ? `CRITICAL EVIDENCE CATEGORY CONSTRAINT: Every clue's "category" field MUST strictly be one of these selected categories: ${allowedHiList}. Do NOT generate any clue outside these selected categories. Ensure the clues distributed across these selected categories collectively provide all necessary evidence to solve the mystery.`
+    : `CRITICAL EVIDENCE CATEGORY CONSTRAINT: Every clue's "category" field MUST strictly be one of these selected categories: ${allowedEnList}. Do NOT generate any clue from any deselected or unlisted category. Ensure the clues distributed across these selected categories collectively provide all necessary evidence to solve the mystery.`;
+
+  const prompt = `You are an expert detective mystery game designer. Return an original, logically consistent, concise mystery. ${languageInstruction} ${categoryInstruction} Difficulty: ${difficulty}. Premise: ${premise || 'Create a compelling original premise.'}. Generate exactly ${c.suspects} suspects, ${c.clues} clues, and ${c.hints} progressive hints. One suspect must be the definite culprit. Clues collectively establish them; do not reveal the culprit in story, descriptions, motives, alibis, or hints. IMPORTANT: All identifiers MUST strictly remain in English alphanumeric format: suspect_01 to suspect_0${c.suspects}, clue_01 to clue_0${c.clues}, and hint_01 to hint_0${c.hints}. In solution.culpritId, you MUST strictly use the exact suspectId (e.g. "suspect_01"), NEVER the suspect name. In solution.evidenceIds, you MUST strictly cite valid clueId strings (e.g. ["clue_01", "clue_02"]), NEVER clue titles. Keep the title under 8 words, the story under 130 words, every suspect field and clue description under 24 words, each hint under 18 words, and the solution under 110 words. Never use markdown.`;
 
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -85,7 +101,7 @@ export async function generateMystery(premise, difficulty, language) {
           maxOutputTokens: 4096
         }
       });
-      return validateGeneratedCase(JSON.parse(response.text), difficulty);
+      return validateGeneratedCase(JSON.parse(response.text), difficulty, activeCategories, language);
     } catch (error) {
       lastError = error;
     }
