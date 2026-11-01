@@ -107,3 +107,4 @@ test('handles Hindi category normalization correctly', () => {
   assert.equal(validated.clues.length, 5);
   assert.ok(validated.clues[0].category.length > 0);
 });
+
