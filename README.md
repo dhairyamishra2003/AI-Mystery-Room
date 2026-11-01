@@ -143,6 +143,3 @@ server/                 Express API and game engine
 spec.md                 Full project specification
 ```
 
-## License
-
-This project is provided for educational and portfolio use.
