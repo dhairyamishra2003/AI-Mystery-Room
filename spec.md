@@ -274,7 +274,7 @@ Difficulty cards must display the number of suspects, clues, and hints.
 ### Validation
 
 - Premise must be a string.
-- Maximum premise length: 500 characters.
+- Maximum premise length: 2,000 words.
 - Empty premise is allowed.
 - Difficulty is required.
 - Only Easy, Medium, and Hard are accepted.

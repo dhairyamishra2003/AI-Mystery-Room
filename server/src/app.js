@@ -40,7 +40,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '20kb' }));
+app.use(express.json({ limit: '250kb' }));
 app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false }));
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'AI Mystery Room API is running.' }));
 app.use('/api/cases', caseRoutes);

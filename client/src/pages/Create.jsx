@@ -15,6 +15,12 @@ import { Layout } from '../components/Layout.jsx';
 import { Button, ErrorMessage, SecureNote } from '../components/UI.jsx';
 import { cases, errorText } from '../services/api.js';
 
+export function countWords(text) {
+  if (!text || typeof text !== 'string') return 0;
+  const matches = text.trim().match(/\S+/g);
+  return matches ? matches.length : 0;
+}
+
 const levels = {
   easy: ['Easy', '3 suspects · 5 clues · 2 hints'],
   medium: ['Medium', '4 suspects · 7 clues · 3 hints'],
@@ -71,6 +77,8 @@ export default function Create() {
   const [error, setError] = useState('');
   const go = useNavigate();
 
+  const wordCount = countWords(premise);
+
   function toggleCategory(categoryId) {
     setSelectedCategories(prev =>
       prev.includes(categoryId)
@@ -81,6 +89,9 @@ export default function Create() {
 
   async function submit(event) {
     event.preventDefault();
+    if (wordCount > 2000) {
+      return setError('Case description cannot exceed 2,000 words.');
+    }
     if (!difficulty) {
       return setError('Select a difficulty to open a case.');
     }
@@ -122,13 +133,17 @@ export default function Create() {
           </select>
         </label>
 
-        {/* 2. Case Description (Premise) */}
+        {/* 2. Case Description */}
         <label className="premise-label">
-          Case premise <span>Optional · {premise.length}/500</span>
+          Case description <span className={wordCount > 2000 ? 'counter-exceeded' : ''}>Optional · {wordCount} / 2000 words</span>
           <textarea
             value={premise}
-            onChange={event => setPremise(event.target.value)}
-            maxLength="500"
+            onChange={event => {
+              setPremise(event.target.value);
+              if (error && countWords(event.target.value) <= 2000) {
+                setError('');
+              }
+            }}
             placeholder={language === 'hi' ? 'एक दुर्लभ वायलिन संगीत कार्यक्रम से पहले गायब हो जाता है…' : 'A priceless violin vanishes moments before a concert…'}
           />
         </label>

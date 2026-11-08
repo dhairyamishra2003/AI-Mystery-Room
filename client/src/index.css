@@ -38,6 +38,7 @@ h1 i{font-family:'Playfair Display';font-weight:700;color:#d9a95e}
 /* Case Form & Evidence Categories */
 .case-form{max-width:840px;background:#19201f;border:1px solid #34403b;padding:28px;border-radius:5px}
 .case-form label>span{float:right;color:#8c9891;font-size:12px;font-weight:400}
+.case-form label>span.counter-exceeded{color:#e66e60;font-weight:600}
 .case-form textarea{width:100%;min-height:130px;resize:vertical;margin-top:8px;background:#111617;border:1px solid #435049;color:#eee;padding:14px;border-radius:3px;font:inherit}
 .case-form fieldset{border:0;padding:0;margin:25px 0}
 .case-form legend{font-weight:700;margin-bottom:10px}

@@ -5,10 +5,20 @@ import { generateMystery } from '../services/geminiService.js';
 import { DIFFICULTY, scoreCase } from '../services/scoringService.js';
 import { CATEGORY_DEFINITIONS } from '../services/validationService.js';
 
+export function countWords(text) {
+  if (!text || typeof text !== 'string') return 0;
+  const matches = text.trim().match(/\S+/g);
+  return matches ? matches.length : 0;
+}
+
 const DEFAULT_CATEGORIES = Object.keys(CATEGORY_DEFINITIONS);
 
 const createSchema = z.object({
-  premise: z.string().max(500).default(''),
+  premise: z.string()
+    .default('')
+    .refine(val => countWords(val) <= 2000, {
+      message: 'Case description cannot exceed 2,000 words.'
+    }),
   difficulty: z.enum(['easy', 'medium', 'hard']),
   language: z.enum(['en', 'hi']).default('en'),
   evidenceCategories: z.array(z.string()).min(1, 'Select at least one evidence category to open a case.').default(DEFAULT_CATEGORIES)
